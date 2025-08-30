@@ -154,14 +154,10 @@ async function shareURL(url, title){ try{ if(navigator.share){ await navigator.s
 let DB = load(STORAGE_KEYS.DATA, {
   groups: [
     { name: '開発中', tools: [
-      { 
-      }
     ]},
     { name: '開発完了', tools: [
-      { }
     ]},
     { name: 'アイデアノート', tools: [
-      {  }
     ]}
   ]
 });
@@ -442,3 +438,4 @@ window.addEventListener('DOMContentLoaded', async ()=>{
 </script>
 </body>
 </html>
+
