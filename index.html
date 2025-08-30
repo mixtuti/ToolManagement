@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <title>個人Webツール用ポータル</title>
+  <style>
+    :root{
+      --bg:#0f1115; --panel:#161a23; --panel-2:#1c2230; --text:#eef2ff; --muted:#a7b2c5;
+      --accent:#7aa2ff; --accent-2:#48d597; --danger:#ff6b6b; --warn:#ffad42;
+      --border:#202636; --soft:#263147;
+      --idea:#ffad42; --dev:#7aa2ff; --done:#48d597;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji"}
+    header{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,var(--bg),rgba(0,0,0,0));padding:10px 12px 6px;border-bottom:1px solid var(--border)}
+    header h1{font-size:18px;margin:0}
+    header small{color:var(--muted)}
+    .wrap{padding:10px;display:grid;gap:10px}
+
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    input,select,button,textarea{border-radius:12px;border:1px solid var(--soft);background:var(--panel-2);color:var(--text);padding:10px 12px;font-size:16px}
+    button{cursor:pointer}
+    button.primary{background:linear-gradient(180deg,var(--accent),#4a78ff);border:0;color:white;font-weight:600}
+    button.ghost{background:transparent;border:1px dashed var(--soft);color:var(--muted)}
+    button.danger{background:linear-gradient(180deg,var(--danger),#e23a3a);border:0;color:white}
+    .chip{padding:6px 10px;border-radius:999px;background:#263147;color:#b9c6e2;font-size:12px;border:1px solid var(--soft);cursor:pointer}
+    .chip.active{background:var(--accent);border-color:transparent;color:#081028}
+
+    .group{background:var(--panel);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .group h2{margin:0;padding:10px 12px;border-bottom:1px solid var(--border);font-size:14px;color:var(--muted);display:flex;gap:8px;align-items:center}
+    .group .content{padding:10px}
+    .grid{display:grid;grid-template-columns:repeat(1,1fr);gap:10px}
+    @media(min-width:640px){.grid{grid-template-columns:repeat(2,1fr)}}
+    @media(min-width:980px){.grid{grid-template-columns:repeat(3,1fr)}}
+
+    .card{background:var(--panel-2);border:1px solid var(--soft);border-radius:12px;padding:10px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+    .ico{width:40px;height:40px;border-radius:10px;background:#1b2233;display:grid;place-items:center;overflow:hidden}
+    .ico img{width:100%;height:100%;object-fit:cover}
+    .ico span{font-size:14px;color:#9db0d1}
+    .meta{min-width:0;display:flex;flex-direction:column;gap:4px}
+    .title{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .desc{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .url{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+    .tag{font-size:11px;color:#b7c5e5;background:#202a40;border:1px solid #2a3650;border-radius:999px;padding:2px 8px}
+
+    .actions{display:flex;gap:6px;align-items:center}
+    .actions button{padding:8px 10px;font-size:14px}
+    .env{display:flex;align-items:center;gap:6px}
+
+    .hr{border-top:1px dashed #2a344a;margin:10px 0}
+    .manage-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .manage-row input,.manage-row textarea{flex:1}
+    .footer{padding:20px 12px;color:var(--muted);text-align:center}
+
+    details.shortcuts{grid-column:1 / -1;background:#172033;border:1px dashed #2a3650;border-radius:12px;padding:8px}
+    details.shortcuts summary{cursor:pointer;color:#bcd1ff}
+    .sc-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+    .sc{font-size:12px;padding:6px 10px;border:1px solid #2a3650;border-radius:999px;background:#202a40;cursor:pointer}
+
+    .status{display:inline-flex;align-items:center;gap:6px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .dot.idea{background:var(--idea)}
+    .dot.dev{background:var(--dev)}
+    .dot.done{background:var(--done)}
+    .status-badge{font-size:12px;color:#cdd7ef}
+
+    /* モーダル */
+    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:20}
+    .overlay.show{display:flex}
+    .modal{width:min(640px,96vw);background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:12px}
+    .modal h3{margin:0 0 8px;font-size:16px;color:var(--muted)}
+    .modal .row{display:flex;gap:8px;flex-wrap:wrap}
+    .modal .row > *{flex:1}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>個人Webツール用ポータル <small>（登録・環境切替・タグ・JSON管理・ステータス）</small></h1>
+  </header>
+
+  <div class="wrap">
+    <div class="toolbar">
+      <input id="search" placeholder="検索（名前 / 説明 / タグ / URL）" oninput="render()" style="flex:1" />
+      <button class="ghost" onclick="openAddModal()">ツール登録</button>
+      <button class="ghost" onclick="toggleManage()" id="manageBtn">編集モード</button>
+      <button class="ghost" onclick="reloadRemote()">リモート読込</button>
+      <button class="ghost" onclick="exportJSON()">JSON出力</button>
+      <input type="file" id="importFile" accept="application/json" style="display:none" />
+      <button class="ghost" onclick="document.getElementById('importFile').click()">JSON読込</button>
+    </div>
+
+    <div id="statusChips" class="toolbar"></div>
+    <div id="tagChips" class="toolbar"></div>
+
+    <div id="groups"></div>
+  </div>
+
+  <div class="footer">© mixtutiツールポータル</div>
+
+  <!-- 登録モーダル -->
+  <div class="overlay" id="addOverlay">
+    <div class="modal">
+      <h3>ツール登録</h3>
+      <div class="row">
+        <input id="addName" placeholder="ツール名（必須）" />
+        <select id="addGroup"></select>
+      </div>
+      <div class="row">
+        <input id="addURL" placeholder="URL（prod）" />
+        <input id="addRepo" placeholder="リポジトリURL（任意）" />
+      </div>
+      <div class="row">
+        <input id="addTags" placeholder="タグ（,区切り）」" />
+        <select id="addStatus">
+          <option value="idea">アイデア</option>
+          <option value="dev" selected>開発中</option>
+          <option value="done">開発完了</option>
+        </select>
+      </div>
+      <div class="row">
+        <textarea id="addDesc" placeholder="説明 / アイデアメモ（任意）"></textarea>
+      </div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="ghost" onclick="closeAddModal()">閉じる</button>
+        <button class="primary" onclick="submitAdd()">登録</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ===== 設定 =====
+const STORAGE_KEYS = { DATA: 'mytools_db_v2', ENV: 'mytools_envprefs_v1' };
+const CONFIG = {
+  REMOTE_URL: 'https://raw.githubusercontent.com/yourname/yourrepo/main/tools.json', // ← あなたのURLに
+  REMOTE_ON_START: true,
+  LOCK_MANAGE: false
+};
+
+const STATUS = { idea:'アイデア', dev:'開発中', done:'開発完了' };
+const STATUS_KEYS = ['idea','dev','done'];
+
+const load = (k, fb) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? fb; } catch { return fb; } };
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+const uid = () => Math.random().toString(36).slice(2,10);
+function hostFrom(url){ try{ return new URL(url).host; }catch{ return ''; } }
+function faviconURL(url){ const h = hostFrom(url); return h? `https://icons.duckduckgo.com/ip3/${h}.ico` : '' }
+function copyText(txt){ navigator.clipboard?.writeText(txt).then(()=> alert('コピーしました')); }
+async function shareURL(url, title){ try{ if(navigator.share){ await navigator.share({ title, url }); } else { copyText(url); } }catch(e){} }
+
+// ===== データ構造 =====
+// groups[].tools[]: { id,name,desc,tags,icon, links:{prod?,dev?,beta?,docs?,…}, repo?, shortcuts?:[{label,url}], status:'idea'|'dev'|'done' }
+let DB = load(STORAGE_KEYS.DATA, {
+  groups: [
+    { name: '開発中', tools: [
+      { id: uid(), name: '同人即売会レジ', desc:'在庫・お釣り・CSV 付きPOS', tags:'event,pos', status:'dev',
+        links:{ prod:'https://yourname.github.io/booth-pos/', dev:'https://yourname.github.io/booth-pos/dev/' },
+        repo:'https://github.com/yourname/booth-pos',
+        shortcuts:[{label:'サマリ', url:'https://yourname.github.io/booth-pos/#stats'}]
+      }
+    ]},
+    { name: '開発完了', tools: [
+      { id: uid(), name: 'お品書きメーカー', desc:'画像生成・価格表・SNS共有', tags:'design,booth', status:'done',
+        links:{ prod:'https://yourname.github.io/menu-maker/' }, repo:'https://github.com/yourname/menu-maker' }
+    ]},
+    { name: 'アイデアノート', tools: [
+      { id: uid(), name: '通知バナー作成', desc:'会場Wi-Fi周知用バナーを自動生成', tags:'idea,utility', status:'idea', links:{} }
+    ]}
+  ]
+});
+let ENV_PREF = load(STORAGE_KEYS.ENV, {}); // { toolId: 'prod' }
+let MANAGE = false;
+let ACTIVE_STATUS = new Set(); // 空=全て
+
+// ===== リモート読込 =====
+async function reloadRemote(){
+  const url = CONFIG.REMOTE_URL; if(!url){ alert('REMOTE_URL を設定してください'); return; }
+  try{
+    const res = await fetch(url, { cache:'no-store', mode:'cors' });
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    const toId = t => ({ id: t.id || uid(), status: t.status || 'dev', ...t });
+
+    if(Array.isArray(data)){
+      DB = { groups: [{ name:'ツール', tools: data.map(toId) }] };
+    }else if(Array.isArray(data.tools)){
+      DB = { groups: [{ name:'ツール', tools: data.tools.map(toId) }] };
+    }else if(Array.isArray(data.groups)){
+      DB = { groups: data.groups.map(g=>({ name:g.name, tools:(g.tools||[]).map(toId) })) };
+    }else{
+      throw new Error('未知のJSON形式');
+    }
+
+    save(STORAGE_KEYS.DATA, DB);
+    render();
+    alert('リモートJSONを読み込みました');
+  }catch(e){ alert('リモート読込に失敗: '+e.message); }
+}
+
+// ===== タグ & ステータス =====
+function collectTags(){
+  const set = new Set();
+  DB.groups.forEach(g=> (g.tools||[]).forEach(t=> (t.tags||'').split(',').map(x=>x.trim()).filter(Boolean).forEach(v=>set.add(v)) ));
+  return Array.from(set).sort();
+}
+let activeTags = new Set();
+function toggleTag(t){ activeTags.has(t)? activeTags.delete(t) : activeTags.add(t); render(); }
+function renderTags(){
+  const box = document.getElementById('tagChips');
+  const tags = collectTags(); box.innerHTML = '';
+  if(tags.length){
+    const all = document.createElement('div');
+    all.className='chip'+(activeTags.size===0?' active':'');
+    all.textContent='タグ: すべて'; all.onclick=()=>{activeTags.clear(); render();};
+    box.appendChild(all);
+  }
+  tags.forEach(t=>{
+    const el = document.createElement('div');
+    el.className = 'chip'+(activeTags.has(t)?' active':'');
+    el.textContent = t; el.onclick=()=>toggleTag(t);
+    box.appendChild(el);
+  });
+}
+function renderStatusChips(){
+  const box = document.getElementById('statusChips');
+  box.innerHTML='';
+  const all = document.createElement('div');
+  all.className='chip'+(ACTIVE_STATUS.size===0?' active':'');
+  all.textContent='ステータス: すべて';
+  all.onclick=()=>{ACTIVE_STATUS.clear(); render();};
+  box.appendChild(all);
+  STATUS_KEYS.forEach(k=>{
+    const el = document.createElement('div');
+    el.className='chip'+(ACTIVE_STATUS.has(k)?' active':'');
+    el.textContent = STATUS[k];
+    el.onclick=()=>{ ACTIVE_STATUS.has(k) ? ACTIVE_STATUS.delete(k) : ACTIVE_STATUS.add(k); render(); };
+    box.appendChild(el);
+  });
+}
+
+// ===== 描画 =====
+function render(){
+  renderStatusChips();
+  renderTags();
+  const q = (document.getElementById('search')?.value||'').toLowerCase().trim();
+  const root = document.getElementById('groups');
+  root.innerHTML = '';
+
+  DB.groups.forEach((g,gi)=>{
+    const sec = document.createElement('section'); sec.className='group';
+    const count = (g.tools||[]).length;
+    sec.innerHTML = `<h2>${g.name} <span class="chip">${count}</span> <span class="chip" onclick="openAll(${gi})">全部開く</span></h2><div class="content"><div class="grid" id="grid-${gi}"></div></div>`;
+    root.appendChild(sec);
+    const grid = sec.querySelector(`#grid-${gi}`);
+
+    (g.tools||[])
+      .filter(t=>{
+        const text = `${t.name||''} ${t.desc||''} ${(t.tags||'')} ${Object.values(t.links||{}).join(' ')}`.toLowerCase();
+        const tagOk = activeTags.size===0 || (t.tags||'').split(',').map(x=>x.trim()).some(v=>activeTags.has(v));
+        const statusOk = ACTIVE_STATUS.size===0 || ACTIVE_STATUS.has(t.status||'dev');
+        return (!q || text.includes(q)) && tagOk && statusOk;
+      })
+      .forEach((t,ti)=>{
+        const card = document.createElement('div'); card.className='card';
+        const envKeys = Object.keys(t.links||{}); const prefEnv = ENV_PREF[t.id]||'prod';
+        const currentEnv = envKeys.includes(prefEnv) ? prefEnv : (envKeys[0]||'');
+        const currentURL = t.links?.[currentEnv] || '';
+        const ico = t.icon || faviconURL(currentURL);
+        const statusKey = t.status||'dev';
+
+        card.innerHTML = `
+          <div class="ico">${ico? `<img src="${ico}" onerror="this.style.display='none';this.parentNode.innerHTML='<span>◎</span>'">` : `<span>◎</span>`}</div>
+          <div class="meta">
+            <div class="title" title="${t.name||''}">${t.name||'(無題)'}</div>
+            <div class="desc" title="${t.desc||''}">${t.desc||''}</div>
+            <div class="status"><span class="dot ${statusKey}"></span><span class="status-badge">${STATUS[statusKey]||''}</span></div>
+            <div class="url" title="${currentURL}">${hostFrom(currentURL)||''}</div>
+            ${(t.tags? `<div class="tags">${t.tags.split(',').map(x=>`<span class='tag'>${x.trim()}</span>`).join('')}</div>`:'')}
+          </div>
+          <div class="actions">
+            <div class="env">
+              ${envKeys.length? `<select onchange=\"setEnv('${t.id}', this.value)\">${envKeys.map(k=>`<option value="${k}" ${k===currentEnv?'selected':''}>${k}</option>`).join('')}</select>` : ''}
+            </div>
+            <button class="primary" ${currentURL? '' : 'disabled'} onclick="openTool('${t.id}')">開く</button>
+            ${t.repo? `<button onclick="openRepo('${t.repo}')">Repo</button>`:''}
+            <button onclick="shareURL('${currentURL}','${t.name||''}')">共有</button>
+            <button onclick="copyText('${currentURL}')">コピー</button>
+          </div>
+        `;
+
+        // 長押しでコピー
+        card.addEventListener('touchstart', e=>{ card._t = Date.now(); });
+        card.addEventListener('touchend', e=>{ if(Date.now()-card._t>500 && currentURL) copyText(currentURL); });
+
+        grid.appendChild(card);
+
+        if((t.shortcuts||[]).length){
+          const det = document.createElement('details'); det.className='shortcuts';
+          det.innerHTML = `<summary>ショートカット</summary><div class='sc-chips'>${t.shortcuts.map(sc=>`<span class='sc' onclick=\"window.open('${sc.url}','_blank')\">${sc.label}</span>`).join('')}</div>`;
+          grid.appendChild(det);
+        }
+
+        if(MANAGE && !CONFIG.LOCK_MANAGE){
+          const row = document.createElement('div'); row.className='manage-row';
+          row.innerHTML = `
+            <input value="${t.name||''}" placeholder="名前" onchange="editTool(${gi},${ti},'name',this.value)">
+            <input value="${t.desc||''}" placeholder="説明 / アイデア" onchange="editTool(${gi},${ti},'desc',this.value)">
+            <input value="${t.tags||''}" placeholder="タグ(,区切り)" onchange="editTool(${gi},${ti},'tags',this.value)">
+            <input value="${t.icon||''}" placeholder="アイコンURL(任意)" onchange="editTool(${gi},${ti},'icon',this.value)">
+            <select onchange="editTool(${gi},${ti},'status',this.value)">
+              ${STATUS_KEYS.map(k=>`<option value="${k}" ${k===(t.status||'dev')?'selected':''}>${STATUS[k]}</option>`).join('')}
+            </select>
+            <button class="danger" onclick="delTool(${gi},${ti})">削除</button>
+          `;
+          grid.appendChild(row);
+
+          // links 編集
+          const linksRow = document.createElement('div'); linksRow.className='manage-row';
+          const entries = Object.entries(t.links||{});
+          linksRow.innerHTML = entries.map(([k,v],idx)=>`
+            <input value="${k}" placeholder="env(例: prod)" onchange="editLinkKey(${gi},${ti},${idx},this.value)">
+            <input value="${v}" placeholder="URL" onchange="editLinkVal(${gi},${ti},${idx},this.value)">
+          `).join('');
+          const addBtn = document.createElement('button'); addBtn.textContent='リンク追加'; addBtn.onclick=()=>addLinkKV(gi,ti);
+          linksRow.appendChild(addBtn);
+          grid.appendChild(linksRow);
+        }
+      });
+
+    if(MANAGE && !CONFIG.LOCK_MANAGE){
+      const add = document.createElement('div'); add.className='manage-row';
+      add.innerHTML = `
+        <input id="add-name-${gi}" placeholder="新規ツール名">
+        <input id="add-url-${gi}" placeholder="URL(デフォルトは prod として保存)">
+        <input id="add-desc-${gi}" placeholder="説明(任意)">
+        <input id="add-tags-${gi}" placeholder="タグ(,区切り)">
+        <select id="add-status-${gi}">
+          ${STATUS_KEYS.map(k=>`<option value="${k}">${STATUS[k]}</option>`).join('')}
+        </select>
+        <button class="primary" onclick="addTool(${gi})">追加</button>
+      `;
+      grid.appendChild(add);
+    }
+  });
+
+  if(MANAGE && !CONFIG.LOCK_MANAGE){
+    const sec = document.createElement('section'); sec.className='group';
+    sec.innerHTML = `<h2>グループ追加</h2><div class='content'><div class='manage-row'>
+      <input id='newGroupName' placeholder='グループ名'>
+      <button class='primary' onclick='addGroup()'>追加</button>
+    </div></div>`;
+    root.appendChild(sec);
+  }
+}
+
+// ===== 動作 =====
+function setEnv(id, env){ ENV_PREF[id]=env; save(STORAGE_KEYS.ENV, ENV_PREF); render(); }
+function openTool(id){
+  const {tool, env, url} = getToolEnvURL(id);
+  if(!url){ alert('URLが設定されていません'); return; }
+  window.open(url, '_blank');
+}
+function openRepo(repo){ window.open(repo, '_blank'); }
+function getToolEnvURL(id){
+  for(const g of DB.groups){
+    for(const t of (g.tools||[])){
+      if(t.id===id){
+        const envKeys = Object.keys(t.links||{});
+        const pref = ENV_PREF[id]||'prod';
+        const useEnv = envKeys.includes(pref) ? pref : (envKeys[0]||'');
+        return { tool:t, env:useEnv, url:t.links?.[useEnv]||'' };
+      }
+    }
+  }
+  return { tool:null, env:'', url:'' };
+}
+function openAll(gi){ const tools = DB.groups[gi]?.tools||[]; tools.forEach(t=>{ const id=t.id; const {url}=getToolEnvURL(id); if(url) window.open(url,'_blank'); }); }
+function toggleManage(){ MANAGE = !MANAGE; document.getElementById('manageBtn').textContent = MANAGE? '閲覧モード' : '編集モード'; render(); }
+
+// 追加/編集/削除（グループ内フォーム）
+function addGroup(){ const name=(document.getElementById('newGroupName').value||'').trim(); if(!name) return; DB.groups.push({name, tools:[]}); save(STORAGE_KEYS.DATA, DB); render(); }
+function addTool(gi){
+  const name=(document.getElementById(`add-name-${gi}`).value||'').trim();
+  const url=(document.getElementById(`add-url-${gi}`).value||'').trim();
+  const desc=(document.getElementById(`add-desc-${gi}`).value||'').trim();
+  const tags=(document.getElementById(`add-tags-${gi}`).value||'').trim();
+  const status=(document.getElementById(`add-status-${gi}`).value||'dev');
+  if(!name && !url) return;
+  const links = url? { prod:url } : {};
+  DB.groups[gi].tools.push({ id:uid(), name: name||url, desc, tags, links, status });
+  save(STORAGE_KEYS.DATA, DB); render();
+}
+function editTool(gi,ti,key,val){ DB.groups[gi].tools[ti][key]=val; save(STORAGE_KEYS.DATA, DB); }
+function delTool(gi,ti){ if(!confirm('削除しますか？')) return; DB.groups[gi].tools.splice(ti,1); save(STORAGE_KEYS.DATA, DB); render(); }
+// links のKV編集
+function addLinkKV(gi,ti){ const t=DB.groups[gi].tools[ti]; t.links ||= {}; t.links['dev'] = ''; save(STORAGE_KEYS.DATA, DB); render(); }
+function editLinkKey(gi,ti,idx,key){ const t=DB.groups[gi].tools[ti]; const entries=Object.entries(t.links||{}); if(!entries[idx]) return; const [oldk,v]=entries[idx]; delete t.links[oldk]; t.links[key]=v; save(STORAGE_KEYS.DATA, DB); render(); }
+function editLinkVal(gi,ti,idx,val){ const t=DB.groups[gi].tools[ti]; const entries=Object.entries(t.links||{}); if(!entries[idx]) return; const [k]=entries[idx]; t.links[k]=val; save(STORAGE_KEYS.DATA, DB); }
+
+// ===== グローバル登録モーダル =====
+function openAddModal(){
+  const sel = document.getElementById('addGroup');
+  sel.innerHTML = DB.groups.map((g,i)=>`<option value="${i}">${g.name}</option>`).join('');
+  document.getElementById('addName').value='';
+  document.getElementById('addURL').value='';
+  document.getElementById('addRepo').value='';
+  document.getElementById('addTags').value='';
+  document.getElementById('addDesc').value='';
+  document.getElementById('addStatus').value='dev';
+  document.getElementById('addOverlay').classList.add('show');
+}
+function closeAddModal(){ document.getElementById('addOverlay').classList.remove('show'); }
+function submitAdd(){
+  const gi = parseInt(document.getElementById('addGroup').value||'0',10);
+  const name=(document.getElementById('addName').value||'').trim();
+  const url=(document.getElementById('addURL').value||'').trim();
+  const repo=(document.getElementById('addRepo').value||'').trim();
+  const desc=(document.getElementById('addDesc').value||'').trim();
+  const tags=(document.getElementById('addTags').value||'').trim();
+  const status=(document.getElementById('addStatus').value||'dev');
+  if(!name && !url){ alert('名前かURLを入力してください'); return; }
+  const links = url? { prod:url } : {};
+  DB.groups[gi].tools.push({ id:uid(), name:name||url, desc, tags, links, status, repo: repo||undefined });
+  save(STORAGE_KEYS.DATA, DB); closeAddModal(); render();
+}
+
+// ===== JSON I/O =====
+function exportJSON(){ const blob = new Blob([JSON.stringify(DB,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tools.json'; a.click(); }
+document.getElementById('importFile').addEventListener('change', (e)=>{
+  const f = e.target.files?.[0]; if(!f) return; const reader = new FileReader();
+  reader.onload = ()=>{ try{ const data = JSON.parse(reader.result); const toId = t=>({ id:t.id||uid(), status:t.status||'dev', ...t });
+    if(Array.isArray(data)) DB={groups:[{name:'ツール', tools:data.map(toId)}]};
+    else if(Array.isArray(data.tools)) DB={groups:[{name:'ツール', tools:data.tools.map(toId)}]};
+    else DB={ groups:(data.groups||[]).map(g=>({ name:g.name, tools:(g.tools||[]).map(toId) })) };
+    save(STORAGE_KEYS.DATA, DB); render(); }catch(err){ alert('JSONの読み込みに失敗しました'); } };
+  reader.readAsText(f);
+});
+
+// ===== 起動 =====
+window.addEventListener('DOMContentLoaded', async ()=>{
+  try{ if(CONFIG.REMOTE_ON_START && CONFIG.REMOTE_URL) await reloadRemote(); }catch{}
+  if(CONFIG.LOCK_MANAGE){ document.getElementById('manageBtn').disabled = true; }
+  render();
+});
+</script>
+</body>
+</html>
