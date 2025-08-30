@@ -154,18 +154,14 @@ async function shareURL(url, title){ try{ if(navigator.share){ await navigator.s
 let DB = load(STORAGE_KEYS.DATA, {
   groups: [
     { name: '開発中', tools: [
-      { id: uid(), name: '同人即売会レジ', desc:'在庫・お釣り・CSV 付きPOS', tags:'event,pos', status:'dev',
-        links:{ prod:'https://yourname.github.io/booth-pos/', dev:'https://yourname.github.io/booth-pos/dev/' },
-        repo:'https://github.com/yourname/booth-pos',
-        shortcuts:[{label:'サマリ', url:'https://yourname.github.io/booth-pos/#stats'}]
+      { 
       }
     ]},
     { name: '開発完了', tools: [
-      { id: uid(), name: 'お品書きメーカー', desc:'画像生成・価格表・SNS共有', tags:'design,booth', status:'done',
-        links:{ prod:'https://yourname.github.io/menu-maker/' }, repo:'https://github.com/yourname/menu-maker' }
+      { }
     ]},
     { name: 'アイデアノート', tools: [
-      { id: uid(), name: '通知バナー作成', desc:'会場Wi-Fi周知用バナーを自動生成', tags:'idea,utility', status:'idea', links:{} }
+      {  }
     ]}
   ]
 });
